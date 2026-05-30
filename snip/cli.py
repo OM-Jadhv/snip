@@ -21,7 +21,8 @@ app = typer.Typer()
 
 
 def _get_editor() -> str:
-    return os.environ.get("EDITOR", "vim")
+    default = "notepad" if sys.platform == "win32" else "vim"
+    return os.environ.get("EDITOR", default)
 
 
 def _edit_body(initial: str = "") -> str:
@@ -190,6 +191,7 @@ def use():
             "Install it:\n"
             "  macOS:   [bold]brew install fzf[/bold]\n"
             "  Ubuntu:  [bold]apt install fzf[/bold]\n"
+            "  Windows: [bold]winget install junegunn.fzf[/bold] or [bold]choco install fzf[/bold]\n"
             "  Others:  [bold]https://github.com/junegunn/fzf#installation[/bold]",
             title="fzf Not Found",
             border_style="red",
@@ -210,14 +212,15 @@ def use():
             (preview_dir / f"{r['id']}.txt").write_text(r["body"])
 
         fzf_input = "\n".join(
-            f"{r['id']} | {r.get('language') or 'text'} | {r.get('tags') or 'no tags'} | {r['title']}"
+            f"{r['id']}|{r.get('language') or 'text'}|{r.get('tags') or 'no tags'}|{r['title']}"
             for r in rows
         )
 
-        preview_cmd = f"cat {shlex.quote(str(preview_dir))}/$(echo {{}} | cut -d'|' -f1 | xargs).txt"
+        cat_cmd = "type" if sys.platform == "win32" else "cat"
+        preview_cmd = f"{cat_cmd} {preview_dir}/{{1}}.txt"
         proc = subprocess.Popen(
             ["fzf", "--height", "40%", "--layout", "reverse", "--border",
-             "--prompt", "snip> ", "--preview", preview_cmd],
+             "--prompt", "snip> ", "--delimiter", "|", "--preview", preview_cmd],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

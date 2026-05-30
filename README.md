@@ -10,7 +10,10 @@ Save short pieces of code or text thoughts from the terminal, then find them lat
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) — for installation and dependency management
-- fzf — required only for `snip use` ([install](https://github.com/junegunn/fzf#installation))
+- fzf — required only for `snip use` ([install](https://github.com/junegunn/fzf#installation)):
+  - macOS: `brew install fzf`
+  - Ubuntu: `apt install fzf`
+  - Windows: `winget install junegunn.fzf` or `choco install fzf`
 - The `all-MiniLM-L6-v2` embedding model downloads automatically on first run (~90 MB, cached to `~/.snip/model/`)
 
 ## Installation
@@ -68,7 +71,7 @@ Body resolution priority:
 1. `--body` flag (explicit body text)
 2. `--from-file` flag (read from file)
 3. stdin pipe (when piped input is detected)
-4. `$EDITOR` (interactive fallback, defaults to vim)
+4. `$EDITOR` (interactive fallback, defaults to `vim` on macOS/Linux or `notepad` on Windows)
 
 Type auto-detection: if `--lang` is provided, type defaults to `code`; otherwise `thought`.
 
@@ -222,6 +225,13 @@ All data lives in your home directory. Nothing leaves your machine.
 
 No API keys, no accounts, no telemetry.
 
+## Platform notes
+
+- **Data directory**: `~/.snip/` resolves to `C:\Users\<you>\.snip\` on Windows. The dot-prefix works correctly on modern Windows but the folder may be hidden by default in File Explorer.
+- **Clipboard**: On Linux, pyperclip requires `xclip` or `xsel` to be installed (`sudo apt install xclip`). On macOS and Windows the clipboard works out of the box.
+- **fzf on Windows**: Requires `winget install junegunn.fzf` or `choco install fzf`. Works in PowerShell, cmd, and Windows Terminal.
+- **`snip edit` editor**: Defaults to `notepad` on Windows, `vim` on macOS/Linux. Override with `$EDITOR` environment variable or `~/.snip/config.toml`.
+
 ## Configuration
 
 `~/.snip/config.toml` is created on first run with commented-out defaults:
@@ -232,7 +242,7 @@ No API keys, no accounts, no telemetry.
 ```
 
 - `db_path` — override the database location
-- `editor` — override the editor used by `snip add` and `snip edit` (also respects `$EDITOR`)
+- `editor` — override the editor used by `snip add` and `snip edit` (also respects `$EDITOR`; defaults to `notepad` on Windows, `vim` elsewhere)
 
 ## Import / Export
 
