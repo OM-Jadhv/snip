@@ -1,3 +1,5 @@
+from collections import Counter
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pyperclip
@@ -92,4 +94,47 @@ def show_related(related: list[dict]) -> None:
             s.get("language", "") or "-",
             s.get("tags", "") or "-",
         )
+    console.print(table)
+
+
+def show_stats(stats: dict) -> None:
+    overview = (
+        f"Total snips:  [bold]{stats['total']}[/bold]\n"
+        f"Code:         {stats['code_count']}\n"
+        f"Thoughts:     {stats['thought_count']}\n"
+        f"Earliest:     {stats['earliest']}\n"
+        f"Most recent:  {stats['latest']}"
+    )
+    console.print(Panel(overview, title="Overview"))
+
+    if stats["by_language"]:
+        max_lang = max(r["count"] for r in stats["by_language"])
+        table = Table(title="By Language", header_style="bold cyan")
+        table.add_column("Language")
+        table.add_column("Count", justify="right")
+        table.add_column("Bar")
+        for r in stats["by_language"][:10]:
+            bar_len = int(r["count"] / max_lang * 20) if max_lang else 0
+            table.add_row(r["language"], str(r["count"]), "█" * bar_len)
+        console.print(table)
+
+    if stats["all_tags"]:
+        tag_counts = Counter(stats["all_tags"]).most_common(10)
+        table = Table(title="Top Tags", header_style="bold cyan")
+        table.add_column("Tag")
+        table.add_column("Count", justify="right")
+        for tag, cnt in tag_counts:
+            table.add_row(tag, str(cnt))
+        console.print(table)
+
+    max_daily = max(stats["daily_counts"].values()) if stats["daily_counts"] else 0
+    table = Table(title="Activity (Last 7 Days)", header_style="bold cyan")
+    table.add_column("Date")
+    table.add_column("Count", justify="right")
+    table.add_column("Bar")
+    for i in range(6, -1, -1):
+        d = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+        cnt = stats["daily_counts"].get(d, 0)
+        bar_len = int(cnt / max_daily * 20) if max_daily else 0
+        table.add_row(d, str(cnt), "█" * bar_len)
     console.print(table)
