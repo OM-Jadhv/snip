@@ -16,3 +16,20 @@ dependencies = [
 [project.scripts]
 snip = "snip.cli:app"
 
+[project.optional-dependencies]
+test = [
+    "pytest>=8",
+    "pytest-mock>=3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["snip"]
+omit = [".venv/*"]
+

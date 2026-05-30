@@ -323,6 +323,44 @@ uv run snip --help
 
 `uv sync` installs all dependencies from `pyproject.toml` into `.venv/` at the project root.
 
+### Running Tests
+
+```bash
+# Install test dependencies
+uv sync --extra test
+
+# Run all tests
+uv run pytest
+
+# With coverage
+uv run pytest --cov=snip --cov-report=term-missing
+
+# Run a specific test file
+uv run pytest tests/test_store.py -v
+```
+
+Tests use an in-memory SQLite database and mock the embedding model (no network or ~80 MB download needed). They complete in under a second. The `tests/conftest.py` provides shared fixtures:
+
+| Fixture | Purpose |
+|---------|---------|
+| `in_memory_db` | In-memory SQLite with sqlite-vec loaded, patched into all modules |
+| `mock_embed` | Returns `np.zeros(384)` — no model download |
+| `cli_runner` | Typer `CliRunner` for CLI command testing |
+| `sample_snips` | 5 pre-inserted snips in the test database |
+| `mock_editor` | Replaces `$EDITOR` invocation with a fixed return |
+| `mock_confirm_yes`/`mock_confirm_no` | Auto-answers delete confirmation prompts |
+
+The test suite covers **116 tests** running in ~0.6s with **~94% line coverage**:
+
+| Module | Coverage |
+|--------|----------|
+| `db.py` | 100% |
+| `store.py` | 100% |
+| `search.py` | 100% |
+| `display.py` | 97% |
+| `cli.py` | 92% |
+| `embeddings.py` | 60% (model loading mocked for speed) |
+
 ## License
 
 MIT License. See [LICENSE](LICENSE).

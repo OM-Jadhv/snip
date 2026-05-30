@@ -221,7 +221,7 @@ def use():
             (preview_dir / f"{r['id']}.txt").write_text(r["body"])
 
         fzf_input = "\n".join(
-            f"{r['id']}|{r.get('language') or 'text'}|{r.get('tags') or 'no tags'}|{r['title']}"
+            f"{r['id']}|{r['language'] or 'text'}|{r['tags'] or 'no tags'}|{r['title']}"
             for r in rows
         )
 
