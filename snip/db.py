@@ -27,6 +27,8 @@ def get_connection() -> sqlite3.Connection:
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("PRAGMA foreign_keys=ON")
+    db.execute("PRAGMA synchronous = NORMAL")
+    db.execute("PRAGMA cache_size = -64000")
     init_schema(db)
     return db
 

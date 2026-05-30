@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import json
-import os
 import shutil
 from datetime import datetime
 import subprocess
@@ -14,7 +15,7 @@ from rich.panel import Panel
 
 from snip.db import get_connection
 from snip.display import show_confirmation, show_related, show_snip, show_stats, show_table
-from snip.search import find_related, hybrid_search
+from snip.search import find_related, hybrid_search, keyword_search
 from snip.store import add_snip, bulk_add_snips, delete_snip, get_all_snips, get_snip, get_stats, list_snips, update_snip
 
 app = typer.Typer()
@@ -92,23 +93,31 @@ def list(
 
 
 @app.command()
-def get(snip_id: int = typer.Argument(..., help="Snip ID")):
+def get(
+    snip_id: int = typer.Argument(..., help="Snip ID"),
+    no_vector: bool = typer.Option(False, "--no-vector", help="Skip related snips (avoids loading embedding model)"),
+):
     snip = get_snip(snip_id)
     if not snip:
         typer.echo(f"Snip {snip_id} not found.", err=True)
         raise typer.Exit(1)
     show_snip(snip)
-    db = get_connection()
-    show_related(find_related(db, snip_id))
-    db.close()
+    if not no_vector:
+        db = get_connection()
+        show_related(find_related(db, snip_id))
+        db.close()
 
 
 @app.command()
 def find(
     query: str = typer.Argument(..., help="Search query"),
     limit: int = typer.Option(5, "--limit", "-n", help="Max results"),
+    text_only: bool = typer.Option(False, "--text-only", help="Keyword-only search (skips embedding model)"),
 ):
-    results = hybrid_search(query, limit=limit)
+    if text_only:
+        results = keyword_search(query, limit=limit)
+    else:
+        results = hybrid_search(query, limit=limit)
     if not results:
         typer.echo("No matches found.")
         return
@@ -393,6 +402,41 @@ def stats():
     data = get_stats(db)
     db.close()
     show_stats(data)
+
+
+@app.command()
+def reindex():
+    """Re-embed all snips with the current model (run after model changes)."""
+    from snip.embeddings import encode
+
+    db = get_connection()
+    rows = db.execute("SELECT id, body FROM snips").fetchall()
+
+    from rich.progress import Progress
+
+    with Progress() as progress:
+        task = progress.add_task("Re-indexing...", total=len(rows))
+        for r in rows:
+            embedding = encode(r["body"])
+            db.execute("DELETE FROM vec_snips WHERE id = ?", (r["id"],))
+            db.execute(
+                "INSERT INTO vec_snips(id, embedding) VALUES (?, ?)",
+                (r["id"], embedding),
+            )
+            progress.update(task, advance=1)
+    db.commit()
+    db.close()
+    typer.echo(f"Re-indexed {len(rows)} snips.")
+
+
+@app.command()
+def init():
+    """Download and cache the embedding model (one-time setup)."""
+    from snip.embeddings import load_model
+
+    typer.echo("Downloading embedding model...")
+    load_model()
+    typer.echo("Model ready.")
 
 
 if __name__ == "__main__":

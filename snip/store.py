@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from snip.db import get_connection
 from snip.embeddings import encode
 
@@ -58,8 +60,9 @@ def update_snip(snip_id: int, body: str, source_file: str | None = None,
         (body, source_file, source_line, snip_id),
     )
     embedding = encode(body)
+    db.execute("DELETE FROM vec_snips WHERE id = ?", (snip_id,))
     db.execute(
-        "INSERT OR REPLACE INTO vec_snips(id, embedding) VALUES (?, ?)",
+        "INSERT INTO vec_snips(id, embedding) VALUES (?, ?)",
         (snip_id, embedding),
     )
     db.commit()

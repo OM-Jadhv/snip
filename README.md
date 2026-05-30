@@ -8,13 +8,13 @@ Save short pieces of code or text thoughts from the terminal, then find them lat
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.14+
 - [uv](https://docs.astral.sh/uv/) — for installation and dependency management
 - fzf — required only for `snip use` ([install](https://github.com/junegunn/fzf#installation)):
   - macOS: `brew install fzf`
   - Ubuntu: `apt install fzf`
   - Windows: `winget install junegunn.fzf` or `choco install fzf`
-- The `all-MiniLM-L6-v2` embedding model downloads automatically on first run (~90 MB, cached to `~/.snip/model/`)
+- The `all-MiniLM-L6-v2` embedding model downloads automatically on first run (~80 MB as ONNX, cached to `~/.snip/model/`)
 
 ## Installation
 
@@ -25,6 +25,14 @@ uv tool install .
 ```
 
 After install the `snip` command is available globally. No virtualenv activation needed.
+
+To pre-download the embedding model (≈80 MB) before using search:
+
+```bash
+snip init
+```
+
+The model downloads automatically on first `snip find` if you skip this step.
 
 ## Quick start
 
@@ -96,25 +104,30 @@ snip list [--tag] [--type] [--limit]
 Show a snip with syntax-highlighted body and source context.
 
 ```bash
-snip get <id>
+snip get <id> [--no-vector]
 ```
 
-Displays the full body with syntax highlighting, copies it to clipboard, shows a source file context panel if `source_file` is set, and lists up to 3 related snips based on semantic similarity.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--no-vector` | False | Skip related snips (avoids loading embedding model) |
+
+Displays the full body with syntax highlighting, copies it to clipboard, shows a source file context panel if `source_file` is set, and lists up to 3 related snips based on semantic similarity. Use `--no-vector` for instant display without loading the embedding model.
 
 ### snip find
 
 Search by keyword or description.
 
 ```bash
-snip find <query> [--limit]
+snip find <query> [--limit] [--text-only]
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `query` | (required) | Search query |
 | `--limit`, `-n` | 5 | Max results |
+| `--text-only` | False | Keyword-only search (skips embedding model) |
 
-Runs both keyword search (LIKE on title, body, tags) and vector similarity search (embedding KNN), merges results with vector-ranked results first, keyword-only results appended after.
+Runs both keyword search (LIKE on title, body, tags) and vector similarity search (embedding KNN), merges results with vector-ranked results first, keyword-only results appended after. Use `--text-only` for instant text matching without loading the model.
 
 ### snip delete
 
@@ -149,6 +162,32 @@ snip use
 ```
 
 Displays each snip as `id | language | tags | title`. Shows a body preview panel. Requires `fzf` on your PATH. Fzf flags used: `--height 40%`, `--layout reverse`, `--border`, `--prompt "snip>"`.
+
+### snip init
+
+Pre-download the embedding model to cache so the first search is instant.
+
+```bash
+snip init
+```
+
+Idempotent — safe to run multiple times.
+
+> **About the "unauthenticated requests" warning:** During model download you may see
+> `Warning: You are sending unauthenticated requests to the HF Hub.` This comes from
+> the Hugging Face Hub server — it's harmless and purely informational. The download
+> works fine without authentication. Set `HF_TOKEN` in your environment to silence it
+> and get higher rate limits.
+
+### snip reindex
+
+Re-embed all snips with the current model. Run this after migrating the embedding backend to realign existing vectors with new queries.
+
+```bash
+snip reindex
+```
+
+Shows a progress bar during processing. The database and model cache are preserved.
 
 ### snip stats
 
@@ -220,7 +259,7 @@ All data lives in your home directory. Nothing leaves your machine.
 ~/.snip/
   snip.db      SQLite database with vector search (snips + vec_snips tables)
   config.toml  Configuration (optional)
-  model/       Cached sentence-transformers model
+  model/       Cached embedding model
 ```
 
 No API keys, no accounts, no telemetry.
